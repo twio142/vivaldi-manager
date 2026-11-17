@@ -74,16 +74,20 @@ Messages go both ways over the same one-shot `sendMessage` channel; no long-live
 1. When the popup opens, it registers a listener, then subscribes:
 
    ```js
-   chrome.runtime.onMessageExternal.addListener((msg, sender) => {
+   chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
      if (sender.id !== VIVALDI_ID || msg?.api !== "vivaldi-manager") return;
+     if (msg.windowId !== windowId) return; // another window's push: don't reply, so that window stops pushing
      if (msg.push === "tabs") render(msg.snapshot);
-     if (msg.push === "readingList") renderReadingList(msg.entries);
+     else if (msg.push === "readingList") renderReadingList(msg.entries);
+     else return;
+     sendResponse({ ok: true });
    });
    await chrome.runtime.sendMessage(VIVALDI_ID, { api: "vivaldi-manager", v: 1, windowId, action: "subscribe" });
    ```
-2. The window's copy of the mod answers `{ ok: true }`, then pushes `{ api: "vivaldi-manager", push: "tabs", snapshot }` and `{ api: "vivaldi-manager", push: "readingList", entries }` right away, so the popup needs no initial `get…` request.
+2. The window's copy of the mod answers `{ ok: true }`, then pushes `{ api: "vivaldi-manager", windowId, push: "tabs", snapshot }` and `{ api: "vivaldi-manager", windowId, push: "readingList", entries }` right away, so the popup needs no initial `get…` request.
 3. From then on it pushes again whenever that window's tabs, stacks or workspaces change (debounced, about 50 ms after the last change) and whenever the reading list changes.
-4. When a push fails because nobody is listening (the popup has closed), the mod stops pushing until the next `subscribe`. The listener doesn't need to reply to pushes.
+4. **The popup replies `{ ok: true }` to every push it accepts.** Chrome's `sendMessage` always waits for a reply. The mod treats anything other than that reply as "popup closed" and stops pushing until the next `subscribe`, whether the result is an error or a different reply. That way it never depends on the wording of Chrome's error messages. A popup that receives a push but doesn't reply gets its first update and nothing after it.
+   - The popup ignores, and doesn't reply to, pushes whose `windowId` isn't its own window's. A push reaches every open page of the extension, and a reply from the wrong window's popup would keep that window's mod pushing for nobody.
 5. Only one popup per window is subscribed at a time; a new `subscribe` replaces the old one.
 
 The listener must be in the popup page, not the service worker. Otherwise a push could arrive in the wrong place or wake the worker for nothing. If the extension also has a service worker that listens to `onMessageExternal`, it must ignore `push` messages.
