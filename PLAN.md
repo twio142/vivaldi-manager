@@ -14,14 +14,14 @@ Done: [VIVALDI.md](VIVALDI.md) covers transport, window routing, the protocol (a
 - **Mock backend:** an in-memory fake implementing the same interface, seeded with realistic snapshots and pushing updates after each action. Lets Phases 2–5 be built and tested without the mod.
 - **Pure state core:** the keyboard state machine (normal/move/search modes, focus, selection) as plain functions with no browser dependency, so the tricky rules (wrap-around, `J/K` bypassing stacks, single-workspace selection, moving into vs over stacks) are unit-testable.
 
-## Phase 2: MVP (read-mostly)
+## Phase 2: MVP (read-mostly) ✅
 
 1. Tabs view: workspace, stack and tab rows; "Default" workspace; empty workspaces shown (they're the drop target for moving into an empty workspace); tab-bar order; current tab focused on open.
 2. Navigation and basic actions: `j/k`, `J/K`, `enter` to activate, `x` to close (on a stack row, closes all its tabs, no confirmation), `y` to copy.
 3. Reading list view with basic actions (`enter`, `x`, `y`, `r`), and `ctrl-n` to switch views.
 4. Live updates from pushes; "mod not installed" state; error toasts.
 
-## Integration check
+## Integration check ✅
 
 As soon as a first version of the mod exists: `ping`, `subscribe` with pushes arriving in the popup, one `moveTabs`, one `createStack`. Pushes are the one part that would change the architecture if they don't work, so check them early. After this, switch from the mock to the real client and keep the mock for tests.
 

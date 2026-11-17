@@ -258,7 +258,7 @@ Vivaldi wraps Chromium's reading list as `vivaldi.readingListPrivate` (`getAll`,
 
 ## Debugging
 
-- Vivaldi's UI, including the mod, can be inspected only when Vivaldi is started with `--debug-packed-apps`: quit with Cmd+Q, run `open -a Vivaldi --args --debug-packed-apps`, then open `vivaldi://inspect/#apps` and inspect `window.html`. The mod's warnings appear in that console.
+- Vivaldi's UI, including the mod, can be inspected without any launch flag: open `vivaldi://inspect/#apps` and inspect `window.html` (one per browser window; pick the one being tested). The mod's warnings appear in that console.
 - From the popup's own devtools (right-click in the popup > Inspect), a request can be tried by hand:
 
   ```js

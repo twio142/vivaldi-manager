@@ -1,0 +1,226 @@
+/* Functional styles only: enough to see focus, selection and move mode. Visual design is Phase 6. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #fff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --border: #e3e3e6;
+  --focus: #e8f0fe;
+  --focus-edge: #1a73e9;
+  --selected: #fff4d6;
+  --moving: #d6f0dd;
+  --error: #c5221f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f1f22;
+    --fg: #ececf0;
+    --muted: #9a9aa2;
+    --border: #36363b;
+    --focus: #263652;
+    --focus-edge: #7aa7ff;
+    --selected: #4a3f1c;
+    --moving: #1f4a2c;
+    --error: #ff8a80;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+.popup {
+  width: 420px;
+  max-height: 580px;
+  display: flex;
+  flex-direction: column;
+}
+
+.views {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.views button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.views button.current {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.views .mode {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+main {
+  overflow-y: auto;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  border-left: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.row .title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row.workspace {
+  margin-top: 6px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.row.workspace.empty {
+  opacity: 0.6;
+}
+
+.row.stacked {
+  padding-left: 30px;
+}
+
+.row.tab.active .title {
+  font-weight: 600;
+}
+
+.row.discarded,
+.row.entry.read {
+  color: var(--muted);
+}
+
+.row.selected {
+  background: var(--selected);
+}
+
+.row.focused {
+  background: var(--focus);
+  border-left-color: var(--focus-edge);
+}
+
+.row.moving {
+  background: var(--moving);
+}
+
+.count,
+.domain {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.favicon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.favicon.letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: var(--border);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ws-icon {
+  width: 16px;
+  text-align: center;
+  flex: none;
+}
+
+.ws-icon.svg {
+  height: 16px;
+  background: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  margin: 0 3px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dot.none {
+  border: 1.5px solid var(--muted);
+}
+
+.read-state {
+  width: 10px;
+  color: var(--focus-edge);
+  font-size: 9px;
+}
+
+.notice {
+  margin: 0;
+  padding: 16px;
+  color: var(--muted);
+}
+
+.notice.error {
+  color: var(--error);
+}
+
+.toasts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.toast {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.toast.error {
+  background: var(--error);
+}
