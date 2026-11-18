@@ -27,11 +27,13 @@ function EntryItem({
   focused,
   match,
   onRemove,
+  onOpen,
 }: {
   entry: ReadingListEntry;
   focused: boolean;
   match?: EntryMatch;
   onRemove: (url: string) => void;
+  onOpen: (url: string) => void;
 }) {
   const ref = useRef<HTMLLIElement>(null);
   useEffect(() => {
@@ -39,7 +41,7 @@ function EntryItem({
   }, [focused]);
   const classes = ["row", "entry", entry.read && "read", focused && "focused"].filter(Boolean);
   return (
-    <li ref={ref} class={classes.join(" ")} aria-selected={focused}>
+    <li ref={ref} class={classes.join(" ")} aria-selected={focused} onClick={() => onOpen(entry.url)}>
       <IconClose label="Remove from reading list" onClose={() => onRemove(entry.url)}>
         <Favicon pageUrl={entry.url} />
       </IconClose>
@@ -95,6 +97,7 @@ export function ReadingList({
   onQuery,
   onKey,
   onRemove,
+  onOpen,
 }: {
   entries: ReadingListEntry[];
   view: ReadingListViewState;
@@ -102,6 +105,7 @@ export function ReadingList({
   /** Runs a key as if pressed; the toolbar buttons are shortcuts for `s`, `h` and `/`. */
   onKey: (key: string) => boolean;
   onRemove: (url: string) => void;
+  onOpen: (url: string) => void;
 }) {
   const { entries, matches } = visibleEntries(all, view);
   const searching = view.mode === "search";
@@ -132,7 +136,7 @@ export function ReadingList({
       ) : (
         <ul class="rows" role="listbox">
           {entries.map((entry) => (
-            <EntryItem key={entry.url} entry={entry} focused={entry.url === view.focus} match={matches.get(entry.url)} onRemove={onRemove} />
+            <EntryItem key={entry.url} entry={entry} focused={entry.url === view.focus} match={matches.get(entry.url)} onRemove={onRemove} onOpen={onOpen} />
           ))}
         </ul>
       )}

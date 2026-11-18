@@ -78,12 +78,14 @@ function TabsView({
   onQuery,
   onDraft,
   onClose,
+  onActivate,
   onMove,
 }: {
   model: TabsModel;
   onQuery: (query: string) => void;
   onDraft: (draft: string) => void;
   onClose: (tabIds: number[]) => void;
+  onActivate: (tabId: number) => void;
   onMove: (args: MoveTabsArgs) => void;
 }) {
   const { view } = model;
@@ -98,7 +100,7 @@ function TabsView({
       {search && search.rows.length === 0 ? (
         <p class="notice">No matches.</p>
       ) : (
-        <TabsList rows={search?.rows ?? model.rows} matches={search?.matches} view={view} onDraft={onDraft} onClose={onClose} onMove={onMove} />
+        <TabsList rows={search?.rows ?? model.rows} matches={search?.matches} view={view} onDraft={onDraft} onClose={onClose} onActivate={onActivate} onMove={onMove} />
       )}
     </>
   );
@@ -327,6 +329,7 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
           <TabsView
             model={tabs}
             onClose={(tabIds) => enqueue([{ type: "close", tabIds }])}
+            onActivate={(tabId) => enqueue([{ type: "activate", tabId }])}
             onMove={(args) => enqueue([{ type: "move", args }])}
             onQuery={(query) => {
               const model = tabsRef.current;
@@ -348,6 +351,7 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
             }}
             onKey={readingListKey}
             onRemove={(url) => enqueue([{ type: "remove", url }])}
+            onOpen={(url) => enqueue([{ type: "open", url }])}
           />
         )}
       </main>

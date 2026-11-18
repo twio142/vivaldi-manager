@@ -200,6 +200,7 @@ function RowItem({
   editing,
   match,
   onClose,
+  onActivate,
   drag,
 }: {
   row: Row;
@@ -209,6 +210,7 @@ function RowItem({
   editing?: Editing;
   match?: RowMatch;
   onClose: (tabIds: number[]) => void;
+  onActivate: (tabId: number) => void;
   drag: DragProps;
 }) {
   const ref = useRef<HTMLLIElement>(null);
@@ -238,6 +240,7 @@ function RowItem({
       onDragOver={drag.onDragOver}
       onDrop={drag.onDrop}
       onDragEnd={drag.onDragEnd}
+      onClick={row.kind === "tab" ? () => onActivate(row.tab.id) : undefined}
     >
       <RowContent row={row} editing={editing} match={match} onClose={onClose} />
     </li>
@@ -250,6 +253,7 @@ export function TabsList({
   view,
   onDraft,
   onClose,
+  onActivate,
   onMove,
 }: {
   rows: Row[];
@@ -258,6 +262,7 @@ export function TabsList({
   view: TabsViewState;
   onDraft: (draft: string) => void;
   onClose: (tabIds: number[]) => void;
+  onActivate: (tabId: number) => void;
   onMove: (args: MoveTabsArgs) => void;
 }) {
   const [dragKey, setDragKey] = useState<string | null>(null);
@@ -333,6 +338,7 @@ export function TabsList({
           editing={row.key === view.focus ? editing : undefined}
           match={matches?.get(row.key)}
           onClose={onClose}
+          onActivate={onActivate}
           drag={dragProps(row)}
         />
       ))}
