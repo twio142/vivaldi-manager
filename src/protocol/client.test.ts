@@ -41,6 +41,17 @@ describe("requests", () => {
     await expect(createVivaldiClient(7, runtime).createStack([1, 2])).resolves.toBe("s1");
   });
 
+  it("pins through chrome.tabs, not the mod", async () => {
+    const { runtime } = fakeRuntime(() => ({ ok: true }));
+    const tabs = { update: vi.fn(async () => ({})) };
+    await createVivaldiClient(7, runtime, tabs).setPinned([1, 2], true);
+    expect(tabs.update.mock.calls).toEqual([
+      [1, { pinned: true }],
+      [2, { pinned: true }],
+    ]);
+    expect(runtime.sendMessage).not.toHaveBeenCalled();
+  });
+
   it("throws the mod's error", async () => {
     const { runtime } = fakeRuntime(() => ({ error: "tab stacking is off" }));
     await expect(createVivaldiClient(7, runtime).createStack([1, 2])).rejects.toEqual(

@@ -31,6 +31,7 @@ export type Effect =
   | { type: "activate"; tabId: number }
   | { type: "close"; tabIds: number[] }
   | { type: "move"; args: MoveTabsArgs }
+  | { type: "setPinned"; tabIds: number[]; pinned: boolean }
   | { type: "copy"; urls: string[] }
   | { type: "addToReadingList"; items: { url: string; title: string }[] }
   | { type: "createStack"; tabIds: number[] }
@@ -140,7 +141,18 @@ function targetTabs(state: TabsViewState, rows: Row[]): Tab[] {
   return row ? rowTabs(row) : [];
 }
 
-const asItems = (tabs: Tab[]) => tabs.map(({ url, title }) => ({ url, title }));
+/** `tabs` plus the rest of any stack one of them is in, in display order. */
+function withStacks(tabs: Tab[], rows: Row[]): Tab[] {
+  const ids = new Set(tabs.map((t) => t.id));
+  const stacks = new Set(
+    rows.flatMap((r) => (r.kind === "tab" && r.stackId !== null && ids.has(r.tab.id) ? [r.stackId] : [])),
+  );
+  return rows.flatMap((r) =>
+    r.kind === "tab" && (ids.has(r.tab.id) || (r.stackId !== null && stacks.has(r.stackId))) ? [r.tab] : [],
+  );
+}
+
+const asItems =(tabs: Tab[]) => tabs.map(({ url, title }) => ({ url, title }));
 
 /** The tab `enter` activates on a stack row: its active tab, else its first. */
 function stackEntryTab(row: StackRow): Tab {
@@ -212,6 +224,14 @@ function normalKey(state: TabsViewState, rows: Row[], key: string): KeyResult {
       return tabs.length > 0
         ? done({ ...state, selection: EMPTY }, { type: "addToReadingList", items: asItems(tabs) })
         : done(state);
+    }
+    case "p": {
+      // Pinned and unpinned tabs can't share a stack, so a stacked tab takes its whole stack along.
+      const tabs = withStacks(targetTabs(state, rows), rows);
+      if (tabs.length === 0) return done(state);
+      // Pin unless every tab already is, so a mixed selection ends up all pinned.
+      const pinned = !tabs.every((t) => t.pinned);
+      return done({ ...state, selection: EMPTY }, { type: "setPinned", tabIds: tabs.map((t) => t.id), pinned });
     }
     case "S": {
       const tabs = rows.flatMap((r) => (r.kind === "tab" ? [r.tab] : []));

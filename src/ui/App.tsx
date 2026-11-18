@@ -181,6 +181,8 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
           if (current) applySnapshot(fromStrip(applyMove(toStrip(current.snapshot), effect.args)));
           return await c.moveTabs(effect.args);
         }
+        case "setPinned":
+          return await c.setPinned(effect.tabIds, effect.pinned);
         case "copy":
           await navigator.clipboard.writeText(effect.urls.join("\n"));
           return toast(`Copied ${plural(effect.urls.length, "URL")}`);

@@ -156,6 +156,15 @@ export function createMockClient(options: MockOptions = {}): VivaldiClient {
 
     moveTabs: (args) => act(() => setTabs(applyMove(strip, args).tabs)),
 
+    setPinned: (tabIds, pinned) =>
+      act(() => {
+        for (const id of tabIds) findTab(id);
+        const ids = new Set(tabIds);
+        const tabs = strip.tabs.map((t) => (ids.has(t.tab.id) ? { ...t, tab: { ...t.tab, pinned } } : t));
+        // Pinned tabs lead the strip. Only the order within a workspace matters, so one stable split does it.
+        setTabs([...tabs.filter((t) => t.tab.pinned), ...tabs.filter((t) => !t.tab.pinned)]);
+      }),
+
     createStack: (tabIds) =>
       act(() => {
         const ids = new Set(tabIds);

@@ -108,6 +108,23 @@ describe("actions", () => {
     ]);
   });
 
+  it("toggles pinning with p, pinning a mixed selection", () => {
+    expect(press(start({ focus: "tab:1" }), "p").effects).toEqual([{ type: "setPinned", tabIds: [1], pinned: false }]);
+    expect(press(start({ focus: "tab:2" }), "p").effects).toEqual([{ type: "setPinned", tabIds: [2], pinned: true }]);
+    const { state, effects } = press(start({ focus: "tab:1" }), "Tab", "Tab", "p");
+    expect(effects).toEqual([{ type: "setPinned", tabIds: [1, 2], pinned: true }]);
+    expect(state.selection.size).toBe(0);
+  });
+
+  it("pins a stacked tab's whole stack", () => {
+    expect(press(start({ focus: "tab:12" }), "p").effects).toEqual([
+      { type: "setPinned", tabIds: [11, 12, 13], pinned: true },
+    ]);
+    expect(press(start({ focus: "stack:" + STACK_B }), "p").effects).toEqual([
+      { type: "setPinned", tabIds: [14, 15], pinned: true },
+    ]);
+  });
+
   it("dissolves a stack, or takes a tab out of it, with G", () => {
     expect(press(start({ focus: "stack:" + STACK_A }), "G").effects).toEqual([
       { type: "dissolveStack", stackId: STACK_A },

@@ -66,6 +66,16 @@ function AudioIcon({ tab }: { tab: Tab }) {
   );
 }
 
+function PinIcon() {
+  return (
+    <svg class="pin" viewBox="2 0 11 16" role="img" aria-label="Pinned">
+      <title>Pinned</title>
+      <path d="M6 2h4l-.5 4 2.5 2.5v1H4v-1L6.5 6z" fill="currentColor" />
+      <path d="M8 9.5V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+    </svg>
+  );
+}
+
 function Dot({ color, chosen = false }: { color: StackColor | null; chosen?: boolean }) {
   const classes = ["dot", color === null && "none", chosen && "chosen"].filter(Boolean).join(" ");
   return (
@@ -139,6 +149,7 @@ function RowContent({
               <Highlight text={row.stack.name} positions={match?.positions} />
             </span>
           )}
+          {row.stack.tabs.every((t) => t.pinned) && <PinIcon />}
           <span class="count">{row.stack.tabs.length}</span>
         </>
       );
@@ -158,6 +169,8 @@ function RowContent({
             </span>
           )}
           <AudioIcon tab={row.tab} />
+          {/* A stacked tab's pin already shows on its stack row. */}
+          {row.tab.pinned && row.stackId === null && <PinIcon />}
         </>
       );
   }

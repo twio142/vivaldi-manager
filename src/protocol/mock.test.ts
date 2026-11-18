@@ -57,6 +57,18 @@ describe("mock client", () => {
     expect(workIds(latest()).slice(0, 3)).toEqual([10, 13, 11]);
   });
 
+  it("moves pinned tabs to the front and unpinned ones after them", async () => {
+    const { client, latest } = await subscribed();
+    await client.setPinned([16], true);
+    await vi.runAllTimersAsync();
+    expect(workIds(latest())[0]).toBe(16);
+    await client.setPinned([16], false);
+    await vi.runAllTimersAsync();
+    // As in Chromium: an unpinned tab stays put, now leading the unpinned ones.
+    expect(workIds(latest()).slice(0, 2)).toEqual([16, 10]);
+    expect(latest().workspaces.find((w) => w.id === WORK)!.items[0]).toMatchObject({ pinned: false });
+  });
+
   it("activates a neighbour when the active tab closes", async () => {
     const { client, latest } = await subscribed();
     await client.closeTabs([12]);

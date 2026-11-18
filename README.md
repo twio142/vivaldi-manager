@@ -24,6 +24,7 @@ Tabs belonging to no workspace are shown in a "Default" workspace.
     - Favicon
     - Title
     - Audio icon
+    - Pin icon (pinned tabs)
 - Actions on a tab row:
     - Activate tab
     - Select tab(s)
@@ -34,6 +35,7 @@ Tabs belonging to no workspace are shown in a "Default" workspace.
     - Stack tabs / Remove tab from stack
     - Add tab(s) to reading list
     - Copy tab URL
+    - Pin / unpin tab(s). A stacked tab pins or unpins with its whole stack.
 - Elements on a workspace row:
     - Workspace icon
     - Workspace name
@@ -41,6 +43,7 @@ Tabs belonging to no workspace are shown in a "Default" workspace.
 - Elements on a stack row:
     - A colored dot indicating the stack color
     - Stack name
+    - Pin icon, if the stack is pinned
     - Tab count
 - Actions on a stack row:
     - Edit stack name
@@ -71,6 +74,7 @@ Tabs belonging to no workspace are shown in a "Default" workspace.
     - `c`: Set a stack's color. `h/l` or arrow keys pick a color, `enter` saves, `esc` cancels.
     - `s`: Add current/selected tab(s) to reading list
     - `S`: Add all tabs to reading list
+    - `p`: Pin/unpin current or selected tab(s), or a stack. Pins unless every target is already pinned.
 
 ## Reading List
 

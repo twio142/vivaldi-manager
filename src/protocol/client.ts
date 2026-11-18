@@ -34,6 +34,7 @@ export interface VivaldiClient {
   activateTab(tabId: number): Promise<void>;
   closeTabs(tabIds: number[]): Promise<void>;
   moveTabs(args: MoveTabsArgs): Promise<void>;
+  setPinned(tabIds: number[], pinned: boolean): Promise<void>;
   createStack(tabIds: number[]): Promise<string>;
   removeFromStack(tabIds: number[]): Promise<void>;
   dissolveStack(stackId: string): Promise<void>;
@@ -65,6 +66,11 @@ export interface RuntimeLike {
   };
 }
 
+/** The slice of `chrome.tabs` the client uses. Pinning is plain Chromium, so it skips the mod. */
+export interface TabsLike {
+  update(tabId: number, props: { pinned: boolean }): Promise<unknown>;
+}
+
 const NOT_INSTALLED = [/Receiving end does not exist/i, /message port closed before a response/i];
 
 function isPush(message: unknown): message is PushMessage {
@@ -79,6 +85,8 @@ function isPush(message: unknown): message is PushMessage {
 export function createVivaldiClient(
   windowId: number,
   runtime: RuntimeLike = chrome.runtime as unknown as RuntimeLike,
+  /** Defaults to `chrome.tabs`, looked up on use so tests that never pin don't need it. */
+  tabs?: TabsLike,
 ): VivaldiClient {
   const tabsListeners = new Set<(snapshot: TabsSnapshot) => void>();
   const readingListListeners = new Set<(entries: ReadingListEntry[]) => void>();
@@ -138,6 +146,16 @@ export function createVivaldiClient(
     },
     moveTabs: async (args) => {
       await request("moveTabs", args);
+    },
+    setPinned: async (tabIds, pinned) => {
+      // No `tabs` permission needed: it only gates reading URLs and titles. The mod's next push
+      // shows the result, with the tabs moved to or from the front of the strip.
+      try {
+        const api = tabs ?? chrome.tabs;
+        await Promise.all(tabIds.map((id) => api.update(id, { pinned })));
+      } catch (e) {
+        throw new ModError(e instanceof Error ? e.message : String(e));
+      }
     },
     createStack: async (tabIds) => (await request<{ stackId: string }>("createStack", { tabIds })).stackId,
     removeFromStack: async (tabIds) => {

@@ -115,6 +115,8 @@ The listener must be in the popup page, not the service worker. Otherwise a push
 
 The extension copies URLs itself, with `navigator.clipboard.writeText` in the popup. A key press counts as the user gesture it needs.
 
+Pinning has no action either: pinned is plain Chromium state, so the extension calls `chrome.tabs.update(tabId, { pinned })` itself. That needs no `tabs` permission (it only gates reading `url` and `title`). Chromium moves the tab to the end of the pinned tabs, or to the front of the unpinned ones, and the mod's next push shows the result. Since pinned and unpinned tabs can't share a stack, the extension pins or unpins a stack's tabs all together.
+
 ### The tabs snapshot
 
 ```js
@@ -253,7 +255,7 @@ Vivaldi wraps Chromium's reading list as `vivaldi.readingListPrivate` (`getAll`,
 
 - `"manifest_version": 3`
 - `"key"`: see *This extension's id must be stable*.
-- `"permissions": ["favicon", "storage"]`. No `tabs` permission is needed when all tab data comes from the mod.
+- `"permissions": ["favicon", "storage"]`. No `tabs` permission is needed when all tab data comes from the mod, and `chrome.tabs.update` for pinning works without it.
 - `"action": { "default_popup": "popup.html" }`. Vivaldi shows it as a toolbar popup.
 
 ## Debugging
