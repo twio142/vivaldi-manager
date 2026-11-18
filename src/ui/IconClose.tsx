@@ -17,7 +17,10 @@ export function IconClose({ label, onClose, children }: { label: string; onClose
           onClose();
         }}
       >
-        ×
+        {/* Drawn, not a "×" glyph: the glyph sits off-center in most fonts. */}
+        <svg viewBox="0 0 8 8" aria-hidden="true">
+          <path d="M1 1l6 6M7 1L1 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
       </button>
     </span>
   );

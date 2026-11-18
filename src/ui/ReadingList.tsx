@@ -1,3 +1,4 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 import type { ReadingListEntry } from "../protocol/types";
 import {
@@ -9,6 +10,7 @@ import {
 import { Favicon } from "./Favicon";
 import { Highlight } from "./Highlight";
 import { IconClose } from "./IconClose";
+import { SortIcon } from "./icons";
 import { SearchInput } from "./SearchInput";
 
 function domain(url: string): string {
@@ -59,16 +61,30 @@ function EntryItem({
 }
 
 /** A toolbar button that never takes focus, so keys keep going to the list. */
-function ToolButton({ label, pressed, onClick }: { label: string; pressed?: boolean; onClick: () => void }) {
+function ToolButton({
+  label,
+  title,
+  pressed,
+  onClick,
+  children,
+}: {
+  label: string;
+  title?: string;
+  pressed?: boolean;
+  onClick: () => void;
+  children?: ComponentChildren;
+}) {
   return (
     <button
       tabIndex={-1}
       class={pressed ? "tool pressed" : "tool"}
+      title={title}
       aria-pressed={pressed}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
     >
       {label}
+      {children}
     </button>
   );
 }
@@ -100,7 +116,9 @@ export function ReadingList({
             if (!searching) onKey("/");
           }}
         />
-        <ToolButton label={`Sort: ${SORT_LABELS[view.sort]}`} onClick={() => onKey("s")} />
+        <ToolButton label={SORT_LABELS[view.sort]} title="Sort" onClick={() => onKey("s")}>
+          <SortIcon />
+        </ToolButton>
         <ToolButton label="Hide read" pressed={view.hideRead} onClick={() => onKey("h")} />
       </div>
       {entries.length === 0 ? (

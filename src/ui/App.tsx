@@ -26,6 +26,7 @@ import {
   type Effect,
   type TabsViewState,
 } from "../state/tabsView";
+import { ReadingListIcon, TabsIcon } from "./icons";
 import { keyName } from "./keys";
 import { ReadingList } from "./ReadingList";
 import { SearchInput } from "./SearchInput";
@@ -89,7 +90,11 @@ function TabsView({
   const search = view.mode === "search" ? searchRows(model.rows, view.query) : null;
   return (
     <>
-      {search && <SearchInput value={view.query} active onInput={onQuery} />}
+      {search && (
+        <div class="toolbar">
+          <SearchInput value={view.query} active onInput={onQuery} />
+        </div>
+      )}
       {search && search.rows.length === 0 ? (
         <p class="notice">No matches.</p>
       ) : (
@@ -298,8 +303,10 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
             class={view === v ? "current" : ""}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => switchView(v)}
+            title={v === "tabs" ? "Tabs" : "Reading list"}
+            aria-label={v === "tabs" ? "Tabs" : "Reading list"}
           >
-            {v === "tabs" ? "Tabs" : "Reading list"}
+            {v === "tabs" ? <TabsIcon /> : <ReadingListIcon />}
           </button>
         ))}
         {tabs && tabs.view.mode !== "normal" && view === "tabs" && (

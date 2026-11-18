@@ -15,17 +15,55 @@ import { Favicon } from "./Favicon";
 import { Highlight } from "./Highlight";
 import { IconClose } from "./IconClose";
 
+const fitted = new Map<string, string>();
+
+/** Crops an SVG's viewBox to what it draws, so icons with and without built-in padding render at one size. */
+function fit(svg: string): string {
+  let out = fitted.get(svg);
+  if (out !== undefined) return out;
+  out = svg;
+  const host = document.createElement("div");
+  host.style.cssText = "position: absolute; visibility: hidden";
+  host.innerHTML = svg;
+  const el = host.querySelector("svg");
+  if (el) {
+    // getBBox needs layout.
+    document.body.append(host);
+    const { x, y, width, height } = el.getBBox();
+    host.remove();
+    if (width > 0 && height > 0) {
+      // getBBox leaves out strokes and anti-aliased edges, so a tight crop would clip them.
+      const pad = Math.max(width, height) / 16;
+      const side = Math.max(width, height) + 2 * pad;
+      el.setAttribute("viewBox", `${x - (side - width) / 2} ${y - (side - height) / 2} ${side} ${side}`);
+      out = el.outerHTML;
+    }
+  }
+  fitted.set(svg, out);
+  return out;
+}
+
 function WorkspaceIcon({ icon }: { icon: Icon }) {
   if ("emoji" in icon) return <span class="ws-icon">{icon.emoji}</span>;
   // Vivaldi's SVG icons are monochrome; a mask lets them take the text color.
-  const url = `url("data:image/svg+xml,${encodeURIComponent(icon.svg)}")`;
+  const url = `url("data:image/svg+xml,${encodeURIComponent(fit(icon.svg))}")`;
   return <span class="ws-icon svg" style={`mask-image: ${url}`} />;
 }
 
 function AudioIcon({ tab }: { tab: Tab }) {
-  if (tab.muted) return <span class="audio" title="Muted">🔇</span>;
-  if (tab.audible) return <span class="audio" title="Playing audio">🔊</span>;
-  return null;
+  if (!tab.muted && !tab.audible) return null;
+  const label = tab.muted ? "Muted" : "Playing audio";
+  return (
+    <svg class="audio" viewBox="0 0 16 16" role="img" aria-label={label}>
+      <title>{label}</title>
+      <path d="M2 6h2.5L8 3v10L4.5 10H2z" fill="currentColor" />
+      {tab.muted ? (
+        <path d="M10.5 6l4 4M14.5 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" />
+      ) : (
+        <path d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" />
+      )}
+    </svg>
+  );
 }
 
 function Dot({ color, chosen = false }: { color: StackColor | null; chosen?: boolean }) {

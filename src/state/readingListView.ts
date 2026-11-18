@@ -7,7 +7,7 @@ import { fuzzyMatch } from "../search/fuzzy";
 
 export type SortOrder = "date" | "title" | "read";
 export const SORT_ORDERS: readonly SortOrder[] = ["date", "title", "read"];
-export const SORT_LABELS: Record<SortOrder, string> = { date: "Date", title: "Title", read: "Unread first" };
+export const SORT_LABELS: Record<SortOrder, string> = { date: "Date", title: "Title", read: "Unread" };
 
 /** Kept across popup openings. */
 export interface ReadingListPrefs {
