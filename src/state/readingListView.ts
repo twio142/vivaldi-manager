@@ -168,6 +168,7 @@ export function handleReadingListKey(
     case "Escape":
       return done(state, { type: "closePopup" });
     case "Enter":
+    case "l":
       return entry ? done(state, { type: "open", url: entry.url }) : done(state);
     case "x":
       return entry ? done(state, { type: "remove", url: entry.url }) : done(state);

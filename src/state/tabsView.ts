@@ -1,6 +1,6 @@
 import { STACK_COLORS, type MoveTabsArgs, type StackColor, type Tab } from "../protocol/types";
 import { computeMove } from "./move";
-import { isFocusable, rowTabs, stepFocus, tabKey, type Row, type StackRow, type TabRow } from "./rows";
+import { isFocusable, rowTabs, stackKey, stepFocus, tabKey, type Row, type StackRow, type TabRow } from "./rows";
 import type { SearchResult } from "./search";
 
 // The tabs view's keyboard state machine. `handleKey` is pure: it returns the next state plus the
@@ -188,9 +188,15 @@ function normalKey(state: TabsViewState, rows: Row[], key: string): KeyResult {
     case "Escape":
       return done(state, { type: "closePopup" });
     case "Enter":
+    case "l":
       if (row?.kind === "tab") return done(state, { type: "activate", tabId: row.tab.id });
       if (row?.kind === "stack") return done(state, { type: "activate", tabId: stackEntryTab(row).id });
       return done(state);
+    case "h":
+      // From a stacked tab up to its stack row.
+      return row?.kind === "tab" && row.stackId !== null
+        ? done({ ...state, focus: stackKey(row.stackId) })
+        : done(state);
     case "x": {
       const tabs = targetTabs(state, rows);
       return tabs.length > 0
@@ -272,8 +278,10 @@ function renameKey(state: TabsViewState, rows: Row[], key: string): KeyResult {
 function colorKey(state: TabsViewState, rows: Row[], key: string): KeyResult {
   const count = state.colors.length;
   switch (key) {
+    case "l":
     case "ArrowRight":
       return done({ ...state, colorIndex: (state.colorIndex + 1) % count });
+    case "h":
     case "ArrowLeft":
       return done({ ...state, colorIndex: (state.colorIndex - 1 + count) % count });
     case "Enter": {

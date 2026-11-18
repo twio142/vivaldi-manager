@@ -62,10 +62,13 @@ Tabs belonging to no workspace are shown in a "Default" workspace.
     - `esc`: Exit move/search mode
     - `x`: Close current/selected item(s)
     - `enter`: Activate current tab, or (when in search mode and focusing on a stack) exit search mode and focus on the stack
+    - `l`: Same as `enter` (normal mode only)
+    - `h`: On a tab in a stack, focus the stack row
     - `y`: Copy current/selected item(s) URL
     - `g`: create a stack with selected tabs
     - `G`: dissolve a stack or remove selected tabs from a stack
     - `i`: Edit a stack's name. Shows a text input with the current name. Press `enter` to save, or `esc` to cancel.
+    - `c`: Set a stack's color. `h/l` or arrow keys pick a color, `enter` saves, `esc` cancels.
     - `s`: Add current/selected tab(s) to reading list
     - `S`: Add all tabs to reading list
 
@@ -90,7 +93,7 @@ Tabs belonging to no workspace are shown in a "Default" workspace.
 - Support hiding read items.
 - Keyboard shortcuts:
     - `j/k`: Move focus up/down
-    - `enter`: Open current item
+    - `enter` / `l`: Open current item
     - `x`: Remove current item
     - `y`: Copy current item URL
     - `r`: Mark current item as read/unread

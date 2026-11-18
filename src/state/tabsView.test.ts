@@ -80,6 +80,16 @@ describe("actions", () => {
     expect(press(start({ focus: "stack:" + STACK_A }), "Enter").effects).toEqual([{ type: "activate", tabId: 12 }]);
   });
 
+  it("activates with l too", () => {
+    expect(press(start({ focus: "tab:2" }), "l").effects).toEqual([{ type: "activate", tabId: 2 }]);
+    expect(press(start({ focus: "stack:" + STACK_A }), "l").effects).toEqual([{ type: "activate", tabId: 12 }]);
+  });
+
+  it("focuses a stacked tab's stack with h", () => {
+    expect(press(start({ focus: "tab:13" }), "h").state.focus).toBe("stack:" + STACK_A);
+    expect(press(start({ focus: "tab:2" }), "h").state.focus).toBe("tab:2");
+  });
+
   it("copies URLs", () => {
     expect(press(start({ focus: "stack:" + STACK_B }), "y").effects).toEqual([
       { type: "copy", urls: ["https://ci.example.com/builds/482", "https://ci.example.com/builds/481"] },
@@ -179,6 +189,15 @@ describe("stack editing", () => {
     const { effects } = press(start({ focus: "stack:" + STACK_A }), "c", "ArrowLeft", "Enter");
     expect(effects).toEqual([{ type: "setStackColor", stackId: STACK_A, color: null }]);
     expect(press(start({ focus: "stack:" + STACK_A }), "c", "ArrowRight", "Enter").effects).toEqual([
+      { type: "setStackColor", stackId: STACK_A, color: "color3" },
+    ]);
+  });
+
+  it("picks with h/l too", () => {
+    expect(press(start({ focus: "stack:" + STACK_A }), "c", "h", "Enter").effects).toEqual([
+      { type: "setStackColor", stackId: STACK_A, color: null },
+    ]);
+    expect(press(start({ focus: "stack:" + STACK_A }), "c", "l", "Enter").effects).toEqual([
       { type: "setStackColor", stackId: STACK_A, color: "color3" },
     ]);
   });

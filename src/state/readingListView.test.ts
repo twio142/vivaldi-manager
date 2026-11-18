@@ -47,6 +47,7 @@ describe("reading list view", () => {
   it("opens, removes, copies and toggles read on the focused entry", () => {
     const state = start({ focus: BROWSERS });
     expect(press(state, "Enter").effects).toEqual([{ type: "open", url: BROWSERS }]);
+    expect(press(state, "l").effects).toEqual([{ type: "open", url: BROWSERS }]);
     expect(press(state, "x").effects).toEqual([{ type: "remove", url: BROWSERS }]);
     expect(press(state, "y").effects).toEqual([{ type: "copy", urls: [BROWSERS] }]);
     expect(press(state, "r").effects).toEqual([{ type: "setRead", url: BROWSERS, read: false }]);
