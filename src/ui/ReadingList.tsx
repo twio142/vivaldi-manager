@@ -8,6 +8,7 @@ import {
 } from "../state/readingListView";
 import { Favicon } from "./Favicon";
 import { Highlight } from "./Highlight";
+import { IconClose } from "./IconClose";
 import { SearchInput } from "./SearchInput";
 
 function domain(url: string): string {
@@ -19,7 +20,17 @@ function domain(url: string): string {
   }
 }
 
-function EntryItem({ entry, focused, match }: { entry: ReadingListEntry; focused: boolean; match?: EntryMatch }) {
+function EntryItem({
+  entry,
+  focused,
+  match,
+  onRemove,
+}: {
+  entry: ReadingListEntry;
+  focused: boolean;
+  match?: EntryMatch;
+  onRemove: (url: string) => void;
+}) {
   const ref = useRef<HTMLLIElement>(null);
   useEffect(() => {
     if (focused) ref.current?.scrollIntoView({ block: "nearest" });
@@ -27,7 +38,9 @@ function EntryItem({ entry, focused, match }: { entry: ReadingListEntry; focused
   const classes = ["row", "entry", entry.read && "read", focused && "focused"].filter(Boolean);
   return (
     <li ref={ref} class={classes.join(" ")} aria-selected={focused}>
-      <Favicon pageUrl={entry.url} />
+      <IconClose label="Remove from reading list" onClose={() => onRemove(entry.url)}>
+        <Favicon pageUrl={entry.url} />
+      </IconClose>
       <span class="title">
         <Highlight text={entry.title || entry.url} positions={match?.field === "title" ? match.positions : undefined} />
       </span>
@@ -65,12 +78,14 @@ export function ReadingList({
   view,
   onQuery,
   onKey,
+  onRemove,
 }: {
   entries: ReadingListEntry[];
   view: ReadingListViewState;
   onQuery: (query: string) => void;
   /** Runs a key as if pressed; the toolbar buttons are shortcuts for `s`, `h` and `/`. */
   onKey: (key: string) => boolean;
+  onRemove: (url: string) => void;
 }) {
   const { entries, matches } = visibleEntries(all, view);
   const searching = view.mode === "search";
@@ -99,7 +114,7 @@ export function ReadingList({
       ) : (
         <ul class="rows" role="listbox">
           {entries.map((entry) => (
-            <EntryItem key={entry.url} entry={entry} focused={entry.url === view.focus} match={matches.get(entry.url)} />
+            <EntryItem key={entry.url} entry={entry} focused={entry.url === view.focus} match={matches.get(entry.url)} onRemove={onRemove} />
           ))}
         </ul>
       )}

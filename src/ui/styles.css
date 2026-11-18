@@ -306,3 +306,49 @@ mark {
   color: var(--focus-edge);
   font-weight: 600;
 }
+
+.icon-close {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.icon-close .close {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--border);
+  color: var(--fg);
+  font: 600 13px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.row:hover .icon-close .close {
+  display: inline-flex;
+}
+
+.icon-close .close:hover {
+  background: var(--error);
+  color: var(--bg);
+}
+
+.row.dragged {
+  opacity: 0.4;
+}
+
+.row.drop-top {
+  box-shadow: inset 0 2px 0 var(--focus-edge);
+}
+
+.row.drop-bottom {
+  box-shadow: inset 0 -2px 0 var(--focus-edge);
+}

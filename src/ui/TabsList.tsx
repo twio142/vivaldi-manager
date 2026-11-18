@@ -1,10 +1,19 @@
-import { useEffect, useRef } from "preact/hooks";
-import { STACK_COLORS, type StackColor, type Tab, type WorkspaceIcon as Icon } from "../protocol/types";
+import type { TargetedDragEvent } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
+import {
+  STACK_COLORS,
+  type MoveTabsArgs,
+  type StackColor,
+  type Tab,
+  type WorkspaceIcon as Icon,
+} from "../protocol/types";
+import { computeDrop, type Drop } from "../state/drop";
 import { tabKey, type Row } from "../state/rows";
 import type { RowMatch } from "../state/search";
 import type { TabsViewState } from "../state/tabsView";
 import { Favicon } from "./Favicon";
 import { Highlight } from "./Highlight";
+import { IconClose } from "./IconClose";
 
 function WorkspaceIcon({ icon }: { icon: Icon }) {
   if ("emoji" in icon) return <span class="ws-icon">{icon.emoji}</span>;
@@ -52,7 +61,17 @@ type Editing =
   | { mode: "rename"; draft: string; onDraft: (draft: string) => void }
   | { mode: "color"; colors: (StackColor | null)[]; index: number };
 
-function RowContent({ row, editing, match }: { row: Row; editing?: Editing; match?: RowMatch }) {
+function RowContent({
+  row,
+  editing,
+  match,
+  onClose,
+}: {
+  row: Row;
+  editing?: Editing;
+  match?: RowMatch;
+  onClose: (tabIds: number[]) => void;
+}) {
   switch (row.kind) {
     case "workspace":
       return (
@@ -65,7 +84,9 @@ function RowContent({ row, editing, match }: { row: Row; editing?: Editing; matc
     case "stack":
       return (
         <>
-          <Dot color={row.stack.color} />
+          <IconClose label="Close stack" onClose={() => onClose(row.stack.tabs.map((t) => t.id))}>
+            <Dot color={row.stack.color} />
+          </IconClose>
           {editing?.mode === "rename" ? (
             <RenameInput draft={editing.draft} onDraft={editing.onDraft} />
           ) : editing?.mode === "color" ? (
@@ -86,7 +107,9 @@ function RowContent({ row, editing, match }: { row: Row; editing?: Editing; matc
     case "tab":
       return (
         <>
-          <Favicon pageUrl={row.tab.url} iconUrl={row.tab.favIconUrl} />
+          <IconClose label="Close tab" onClose={() => onClose([row.tab.id])}>
+            <Favicon pageUrl={row.tab.url} iconUrl={row.tab.favIconUrl} />
+          </IconClose>
           <span class="title">
             <Highlight text={row.tab.title || row.tab.url} positions={match?.field === "title" ? match.positions : undefined} />
           </span>
@@ -102,6 +125,22 @@ function RowContent({ row, editing, match }: { row: Row; editing?: Editing; matc
   }
 }
 
+const DRAG_TYPE = "application/x-vivaldi-manager-row";
+
+type DragHandler = (e: TargetedDragEvent<HTMLLIElement>) => void;
+
+interface DragProps {
+  draggable: boolean;
+  /** Being dragged: the row itself, or a tab of the dragged stack. */
+  dragged: boolean;
+  /** Draw the drop line on this edge. */
+  dropEdge: "top" | "bottom" | null;
+  onDragStart: DragHandler;
+  onDragOver: DragHandler;
+  onDrop: DragHandler;
+  onDragEnd: DragHandler;
+}
+
 function RowItem({
   row,
   focused,
@@ -109,6 +148,8 @@ function RowItem({
   moving,
   editing,
   match,
+  onClose,
+  drag,
 }: {
   row: Row;
   focused: boolean;
@@ -116,6 +157,8 @@ function RowItem({
   moving: boolean;
   editing?: Editing;
   match?: RowMatch;
+  onClose: (tabIds: number[]) => void;
+  drag: DragProps;
 }) {
   const ref = useRef<HTMLLIElement>(null);
   useEffect(() => {
@@ -131,10 +174,21 @@ function RowItem({
     focused && "focused",
     selected && "selected",
     moving && "moving",
+    drag.dragged && "dragged",
+    drag.dropEdge && `drop-${drag.dropEdge}`,
   ].filter(Boolean);
   return (
-    <li ref={ref} class={classes.join(" ")} aria-selected={focused}>
-      <RowContent row={row} editing={editing} match={match} />
+    <li
+      ref={ref}
+      class={classes.join(" ")}
+      aria-selected={focused}
+      draggable={drag.draggable}
+      onDragStart={drag.onDragStart}
+      onDragOver={drag.onDragOver}
+      onDrop={drag.onDrop}
+      onDragEnd={drag.onDragEnd}
+    >
+      <RowContent row={row} editing={editing} match={match} onClose={onClose} />
     </li>
   );
 }
@@ -144,13 +198,60 @@ export function TabsList({
   matches,
   view,
   onDraft,
+  onClose,
+  onMove,
 }: {
   rows: Row[];
   /** Search matches, for highlighting. */
   matches?: ReadonlyMap<string, RowMatch>;
   view: TabsViewState;
   onDraft: (draft: string) => void;
+  onClose: (tabIds: number[]) => void;
+  onMove: (args: MoveTabsArgs) => void;
 }) {
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [drop, setDrop] = useState<Drop | null>(null);
+  const endDrag = () => {
+    setDragKey(null);
+    setDrop(null);
+  };
+  // Dragging works on the full list only: not while searching (rows are filtered) or editing.
+  const canDrag = view.mode === "normal";
+  const dragRow = rows.find((r) => r.key === dragKey);
+  const draggedKeys = new Set<string>(dragRow ? [dragRow.key] : []);
+  if (dragRow?.kind === "stack") for (const t of dragRow.stack.tabs) draggedKeys.add(tabKey(t.id));
+
+  const dragProps = (row: Row): DragProps => ({
+    draggable: canDrag && row.kind !== "workspace",
+    dragged: draggedKeys.has(row.key),
+    dropEdge: drop?.indicator.key === row.key ? drop.indicator.edge : null,
+    onDragStart: (e) => {
+      if (!e.dataTransfer) return;
+      e.dataTransfer.effectAllowed = "move";
+      // A private type, so the drag can't drop a URL into Vivaldi's tab bar or another app.
+      e.dataTransfer.setData(DRAG_TYPE, row.key);
+      setDragKey(row.key);
+    },
+    onDragOver: (e) => {
+      if (dragKey === null) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const half = e.clientY < rect.top + rect.height / 2 ? "top" : "bottom";
+      const next = computeDrop(rows, dragKey, row.key, half);
+      if (next) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      }
+      // Dragover fires continuously; only re-render when the drop spot changes.
+      if (JSON.stringify(next) !== JSON.stringify(drop)) setDrop(next);
+    },
+    onDrop: (e) => {
+      e.preventDefault();
+      if (drop) onMove(drop.args);
+      endDrag();
+    },
+    onDragEnd: endDrag,
+  });
+
   // In move mode the focused row is marked; a stack is marked with all its tabs, which move with it.
   const focusedRow = rows.find((r) => r.key === view.focus);
   const moving = new Set<string>();
@@ -180,6 +281,8 @@ export function TabsList({
           moving={moving.has(row.key)}
           editing={row.key === view.focus ? editing : undefined}
           match={matches?.get(row.key)}
+          onClose={onClose}
+          drag={dragProps(row)}
         />
       ))}
     </ul>

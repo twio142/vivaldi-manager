@@ -39,9 +39,9 @@ As soon as a first version of the mod exists: `ping`, `subscribe` with pushes ar
 - Fuzzy search in both views (`/`), fzf-style: letters in order, no typo tolerance, space-separated terms all must match, case-sensitive only when a term has an uppercase letter. Results keep the list order and grouping (a matching stacked tab brings its stack row along), focus jumps to the best match, matched letters are highlighted. Home-made matcher, no dependency
 - Reading list sorting (`s` cycles date → title → unread first; date uses `lastUpdate`) and hide-read toggle (`h`), persisted in `chrome.storage.local`. Toolbar with the search input and both controls, also clickable
 
-## Phase 5: Mouse
+## Phase 5: Mouse ✅
 
-- Close button on hover
-- Drag and drop, reusing the move-mode logic from Phase 3. Drags only the dragged row (a tab, or a whole stack)
+- Close button on hover, in place of the row's icon: the favicon on tab and reading list rows (closes the tab, removes the item), the color dot on stack rows (closes the whole stack)
+- Drag and drop: drags only the dragged row (a tab, or a whole stack); top or bottom half of the row under the pointer picks before or after, a stacked tab joins its stack, a stack never nests. Uses the same `moveTabs` call and optimistic reorder as move mode. Off while searching or editing a stack
 
 ## Phase 6: Visual style

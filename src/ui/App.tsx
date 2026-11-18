@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { applyMove, fromStrip, toStrip } from "../model/strip";
 import { ModNotInstalledError, type VivaldiClient } from "../protocol/client";
-import type { ReadingListEntry, TabsSnapshot } from "../protocol/types";
+import type { MoveTabsArgs, ReadingListEntry, TabsSnapshot } from "../protocol/types";
 import {
   DEFAULT_PREFS,
   SORT_ORDERS,
@@ -76,10 +76,14 @@ function TabsView({
   model,
   onQuery,
   onDraft,
+  onClose,
+  onMove,
 }: {
   model: TabsModel;
   onQuery: (query: string) => void;
   onDraft: (draft: string) => void;
+  onClose: (tabIds: number[]) => void;
+  onMove: (args: MoveTabsArgs) => void;
 }) {
   const { view } = model;
   const search = view.mode === "search" ? searchRows(model.rows, view.query) : null;
@@ -89,7 +93,7 @@ function TabsView({
       {search && search.rows.length === 0 ? (
         <p class="notice">No matches.</p>
       ) : (
-        <TabsList rows={search?.rows ?? model.rows} matches={search?.matches} view={view} onDraft={onDraft} />
+        <TabsList rows={search?.rows ?? model.rows} matches={search?.matches} view={view} onDraft={onDraft} onClose={onClose} onMove={onMove} />
       )}
     </>
   );
@@ -313,6 +317,8 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
         {status.kind === "ready" && view === "tabs" && tabs && (
           <TabsView
             model={tabs}
+            onClose={(tabIds) => enqueue([{ type: "close", tabIds }])}
+            onMove={(args) => enqueue([{ type: "move", args }])}
             onQuery={(query) => {
               const model = tabsRef.current;
               if (model) setTabs({ ...model, view: setQuery(model.view, query, searchRows(model.rows, query)) });
@@ -332,6 +338,7 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
               if (model) setReadingList({ ...model, view: setReadingListQuery(model.view, model.entries, query) });
             }}
             onKey={readingListKey}
+            onRemove={(url) => enqueue([{ type: "remove", url }])}
           />
         )}
       </main>
