@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vivaldi Manager",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Tabs, workspaces and reading list for Vivaldi, driven from the keyboard.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4xBQUjX39dsFmVOxIQvp4GtdYyOcarCAYDVebwWjEJDuHoa9tQhMm9w7+C0oPz4Jbztyb2B3fikpicvcNB9WwOTx/YX8I99cPcgmXJzt+i3UIk/S6PzNDvbviOn77NK0jSiLsA01cLnLb7f3szJnkAqwQzL6+9tQaUqihbbehjzb2u5VsBQRuLNaXEVaKk3qJ8cFLYaZZzsmv5vMAN38Sk2rLYUdw/m70pc9zSNcMEsSrBXr/+QU1qXtoh7mMuae+QYSAxDjFT7DSZQhsuEBxHNjAAwP1BNYARsXK7lPmkUy/ia6j/qukHKxRrQ08uXTMrQTO1IQOQAOZfEtAh5cHQIDAQAB",
   "permissions": [
