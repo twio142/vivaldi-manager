@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
-import { STACK_COLORS, type Tab, type WorkspaceIcon as Icon } from "../protocol/types";
+import { STACK_COLORS, type StackColor, type Tab, type WorkspaceIcon as Icon } from "../protocol/types";
 import { tabKey, type Row } from "../state/rows";
 import type { TabsViewState } from "../state/tabsView";
 import { Favicon } from "./Favicon";
@@ -17,7 +17,40 @@ function AudioIcon({ tab }: { tab: Tab }) {
   return null;
 }
 
-function RowContent({ row }: { row: Row }) {
+function Dot({ color, chosen = false }: { color: StackColor | null; chosen?: boolean }) {
+  const classes = ["dot", color === null && "none", chosen && "chosen"].filter(Boolean).join(" ");
+  return (
+    <span
+      class={classes}
+      style={color ? `background: ${STACK_COLORS[color].rgb}` : undefined}
+      title={color ? STACK_COLORS[color].name : "No color"}
+    />
+  );
+}
+
+function RenameInput({ draft, onDraft }: { draft: string; onDraft: (draft: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+  return (
+    <input
+      ref={ref}
+      class="title rename"
+      value={draft}
+      spellcheck={false}
+      onInput={(e) => onDraft(e.currentTarget.value)}
+    />
+  );
+}
+
+/** How the focused stack row is being edited, if it is. */
+type Editing =
+  | { mode: "rename"; draft: string; onDraft: (draft: string) => void }
+  | { mode: "color"; colors: (StackColor | null)[]; index: number };
+
+function RowContent({ row, editing }: { row: Row; editing?: Editing }) {
   switch (row.kind) {
     case "workspace":
       return (
@@ -27,16 +60,25 @@ function RowContent({ row }: { row: Row }) {
           <span class="count">{row.workspace.tabCount}</span>
         </>
       );
-    case "stack": {
-      const color = row.stack.color ? STACK_COLORS[row.stack.color].rgb : undefined;
+    case "stack":
       return (
         <>
-          <span class={color ? "dot" : "dot none"} style={color ? `background: ${color}` : undefined} />
-          <span class="title">{row.stack.name}</span>
+          <Dot color={row.stack.color} />
+          {editing?.mode === "rename" ? (
+            <RenameInput draft={editing.draft} onDraft={editing.onDraft} />
+          ) : editing?.mode === "color" ? (
+            // The color choices take the name's place.
+            <span class="title colors">
+              {editing.colors.map((color, i) => (
+                <Dot key={color ?? "none"} color={color} chosen={i === editing.index} />
+              ))}
+            </span>
+          ) : (
+            <span class="title">{row.stack.name}</span>
+          )}
           <span class="count">{row.stack.tabs.length}</span>
         </>
       );
-    }
     case "tab":
       return (
         <>
@@ -48,7 +90,19 @@ function RowContent({ row }: { row: Row }) {
   }
 }
 
-function RowItem({ row, focused, selected, moving }: { row: Row; focused: boolean; selected: boolean; moving: boolean }) {
+function RowItem({
+  row,
+  focused,
+  selected,
+  moving,
+  editing,
+}: {
+  row: Row;
+  focused: boolean;
+  selected: boolean;
+  moving: boolean;
+  editing?: Editing;
+}) {
   const ref = useRef<HTMLLIElement>(null);
   useEffect(() => {
     if (focused) ref.current?.scrollIntoView({ block: "nearest" });
@@ -66,12 +120,20 @@ function RowItem({ row, focused, selected, moving }: { row: Row; focused: boolea
   ].filter(Boolean);
   return (
     <li ref={ref} class={classes.join(" ")} aria-selected={focused}>
-      <RowContent row={row} />
+      <RowContent row={row} editing={editing} />
     </li>
   );
 }
 
-export function TabsList({ rows, view }: { rows: Row[]; view: TabsViewState }) {
+export function TabsList({
+  rows,
+  view,
+  onDraft,
+}: {
+  rows: Row[];
+  view: TabsViewState;
+  onDraft: (draft: string) => void;
+}) {
   // In move mode the focused row is marked; a stack is marked with all its tabs, which move with it.
   const focusedRow = rows.find((r) => r.key === view.focus);
   const moving = new Set<string>();
@@ -79,6 +141,12 @@ export function TabsList({ rows, view }: { rows: Row[]; view: TabsViewState }) {
     moving.add(focusedRow.key);
     if (focusedRow.kind === "stack") for (const t of focusedRow.stack.tabs) moving.add(tabKey(t.id));
   }
+  const editing: Editing | undefined =
+    view.mode === "rename"
+      ? { mode: "rename", draft: view.draft, onDraft }
+      : view.mode === "color"
+        ? { mode: "color", colors: view.colors, index: view.colorIndex }
+        : undefined;
   const isSelected = (row: Row) =>
     row.kind === "tab"
       ? view.selection.has(row.tab.id)
@@ -93,6 +161,7 @@ export function TabsList({ rows, view }: { rows: Row[]; view: TabsViewState }) {
           focused={row.key === view.focus}
           selected={isSelected(row)}
           moving={moving.has(row.key)}
+          editing={row.key === view.focus ? editing : undefined}
         />
       ))}
     </ul>

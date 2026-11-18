@@ -10,8 +10,16 @@ import {
   type ReadingListEffect,
   type ReadingListViewState,
 } from "../state/readingListView";
-import { buildRows, type Row } from "../state/rows";
-import { handleKey, initialState, reconcile, type Effect, type TabsViewState } from "../state/tabsView";
+import { buildRows, stackKey, type Row } from "../state/rows";
+import {
+  focusWhenPresent,
+  handleKey,
+  initialState,
+  reconcile,
+  setDraft,
+  type Effect,
+  type TabsViewState,
+} from "../state/tabsView";
 import { keyName } from "./keys";
 import { ReadingList } from "./ReadingList";
 import { TabsList } from "./TabsList";
@@ -114,13 +122,26 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
           return toast(`Copied ${plural(effect.urls.length, "URL")}`);
         case "addToReadingList": {
           const { added, skipped } = await c.addToReadingList(effect.items);
-          const parts = [added.length > 0 && `Added ${plural(added.length, "page")} to the reading list`];
-          if (skipped.length > 0) parts.push(`skipped ${plural(skipped.length, "page")} that can't be added`);
-          return toast(parts.filter(Boolean).join(", ") || "Nothing added", added.length === 0);
-        }
-        case "createStack":
-          await c.createStack(effect.tabIds);
+          if (added.length > 0) toast(`Added ${plural(added.length, "page")} to the reading list`);
+          if (skipped.length > 0) {
+            // Name each skipped page, with the mod's reason; a long list is cut off.
+            const title = (url: string) => effect.items.find((i) => i.url === url)?.title || url;
+            const lines = skipped.slice(0, 3).map((s) => `${title(s.url)}: ${s.reason}`);
+            if (skipped.length > 3) lines.push(`and ${skipped.length - 3} more`);
+            toast(`Skipped ${plural(skipped.length, "page")}:\n${lines.join("\n")}`, true);
+          }
           return;
+        }
+        case "createStack": {
+          const stackId = await c.createStack(effect.tabIds);
+          const model = tabsRef.current;
+          if (model) setTabs({ ...model, view: focusWhenPresent(model.view, model.rows, stackKey(stackId)) });
+          return;
+        }
+        case "renameStack":
+          return await c.renameStack(effect.stackId, effect.name);
+        case "setStackColor":
+          return await c.setStackColor(effect.stackId, effect.color);
         case "removeFromStack":
           return await c.removeFromStack(effect.tabIds);
         case "dissolveStack":
@@ -212,7 +233,9 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
             {v === "tabs" ? "Tabs" : "Reading list"}
           </button>
         ))}
-        {tabs?.view.mode === "move" && view === "tabs" && <span class="mode">MOVE</span>}
+        {tabs && tabs.view.mode !== "normal" && view === "tabs" && (
+          <span class="mode">{tabs.view.mode.toUpperCase()}</span>
+        )}
       </nav>
       <main>
         {status.kind === "connecting" && <p class="notice">Connecting…</p>}
@@ -222,7 +245,16 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
           </p>
         )}
         {status.kind === "error" && <p class="notice error">{status.message}</p>}
-        {status.kind === "ready" && view === "tabs" && tabs && <TabsList rows={tabs.rows} view={tabs.view} />}
+        {status.kind === "ready" && view === "tabs" && tabs && (
+          <TabsList
+            rows={tabs.rows}
+            view={tabs.view}
+            onDraft={(draft) => {
+              const model = tabsRef.current;
+              if (model) setTabs({ ...model, view: setDraft(model.view, draft) });
+            }}
+          />
+        )}
         {status.kind === "ready" && view === "readingList" && readingList && (
           <ReadingList entries={readingList.entries} view={readingList.view} />
         )}

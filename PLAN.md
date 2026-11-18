@@ -25,12 +25,13 @@ Done: [VIVALDI.md](VIVALDI.md) covers transport, window routing, the protocol (a
 
 As soon as a first version of the mod exists: `ping`, `subscribe` with pushes arriving in the popup, one `moveTabs`, one `createStack`. Pushes are the one part that would change the architecture if they don't work, so check them early. After this, switch from the mock to the real client and keep the mock for tests.
 
-## Phase 3: Mutations
+## Phase 3: Mutations ✅
 
 - Selection (`tab`)
 - Add to reading list (`s` for current/selected, `S` for all tabs in the current window), reporting `skipped` URLs
-- Stacking (`g`, `G`)
-- Stack rename (`i`) and stack color (Vivaldi's 9-color palette)
+- Stacking (`g`, `G`). After `g`, focus moves to the new stack row
+- Stack rename (`i`): input prefilled with the shown name; `enter` saves, `esc` cancels, an empty name clears the custom name
+- Stack color (`c`): the name is replaced by a row of colored dots (all but the current color, plus "no color"); `left`/`right` to pick, `enter` to confirm, `esc` to cancel
 - Move mode (`v`) last, as it's the hardest. It always moves only the focused row (a tab, or a whole stack), never the selection. Cases: crossing workspaces, joining stacks, moving a whole stack, moving into an empty workspace (workspace rows aren't focusable, so `j/k` stops at an empty workspace and drops the tab into it with `target: { workspaceId }`). One `moveTabs` per key press with an optimistic local reorder.
 
 ## Phase 4: Search and sorting

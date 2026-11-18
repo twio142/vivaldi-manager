@@ -216,6 +216,7 @@ main {
 
 .toast {
   padding: 6px 10px;
+  white-space: pre-line;
   border-radius: 6px;
   background: var(--fg);
   color: var(--bg);
@@ -223,4 +224,25 @@ main {
 
 .toast.error {
   background: var(--error);
+}
+
+.rename {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--focus-edge);
+  border-radius: 3px;
+  padding: 0 4px;
+  outline: none;
+}
+
+.colors {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.dot.chosen {
+  outline: 2px solid var(--focus-edge);
+  outline-offset: 2px;
 }

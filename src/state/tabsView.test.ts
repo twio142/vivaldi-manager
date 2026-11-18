@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleSnapshot } from "../protocol/fixture";
 import { buildRows } from "./rows";
-import { handleKey, initialState, reconcile, type TabsViewState } from "./tabsView";
+import { focusWhenPresent, handleKey, initialState, reconcile, setDraft, type TabsViewState } from "./tabsView";
 
 const STACK_A = "6f1c2a9e-0000-4000-8000-000000000001";
 const STACK_B = "6f1c2a9e-0000-4000-8000-000000000002";
@@ -140,5 +140,76 @@ describe("reconcile", () => {
     const next = reconcile(start({ selection: new Set([12, 13]) }), rows, buildRows(snapshot));
     expect(next.focus).toBe("tab:13");
     expect([...next.selection]).toEqual([13]);
+  });
+});
+
+describe("stack editing", () => {
+  it("renames a stack, prefilled with its shown name", () => {
+    let { state } = press(start({ focus: "stack:" + STACK_B }), "i");
+    expect(state).toMatchObject({ mode: "rename", draft: "Build log #482" });
+    expect(handleKey(state, rows, "a").handled).toBe(false);
+    state = setDraft(state, "  CI  ");
+    const { state: after, effects } = press(state, "Enter");
+    expect(effects).toEqual([{ type: "renameStack", stackId: STACK_B, name: "CI" }]);
+    expect(after.mode).toBe("normal");
+  });
+
+  it("does nothing when the name is unchanged, and cancels on esc", () => {
+    expect(press(start({ focus: "stack:" + STACK_B }), "i", "Enter").effects).toEqual([]);
+    const { state, effects } = press(setDraft(press(start({ focus: "stack:" + STACK_B }), "i").state, "x"), "Escape");
+    expect(effects).toEqual([]);
+    expect(state.mode).toBe("normal");
+  });
+
+  it("clears a custom name with an empty one", () => {
+    const state = setDraft(press(start({ focus: "stack:" + STACK_A }), "i").state, "");
+    expect(press(state, "Enter").effects).toEqual([{ type: "renameStack", stackId: STACK_A, name: "" }]);
+  });
+
+  it("offers every color but the current one, plus none", () => {
+    const { state } = press(start({ focus: "stack:" + STACK_A }), "c");
+    expect(state.mode).toBe("color");
+    expect(state.colors).not.toContain("color2");
+    expect(state.colors).toHaveLength(9);
+    expect(state.colors.at(-1)).toBeNull();
+  });
+
+  it("picks with left/right, wraps, and confirms with enter", () => {
+    const { effects } = press(start({ focus: "stack:" + STACK_A }), "c", "ArrowLeft", "Enter");
+    expect(effects).toEqual([{ type: "setStackColor", stackId: STACK_A, color: null }]);
+    expect(press(start({ focus: "stack:" + STACK_A }), "c", "ArrowRight", "Enter").effects).toEqual([
+      { type: "setStackColor", stackId: STACK_A, color: "color3" },
+    ]);
+  });
+
+  it("cancels the color pick on esc and ignores other keys meanwhile", () => {
+    const { state, effects } = press(start({ focus: "stack:" + STACK_A }), "c", "x", "j", "Escape");
+    expect(effects).toEqual([]);
+    expect(state).toMatchObject({ mode: "normal", focus: "stack:" + STACK_A });
+  });
+
+  it("only edits stack rows", () => {
+    expect(press(start({ focus: "tab:2" }), "i").state.mode).toBe("normal");
+    expect(press(start({ focus: "tab:2" }), "c").state.mode).toBe("normal");
+  });
+});
+
+describe("focusWhenPresent", () => {
+  it("focuses a new stack once a snapshot brings it", () => {
+    const pending = focusWhenPresent(start(), rows, "stack:new");
+    expect(pending.focus).toBe("tab:12");
+    const snapshot = sampleSnapshot();
+    snapshot.workspaces[0]!.items.push({ type: "stack", id: "new", name: "", customName: false, color: null, tabs: [] });
+    const next = reconcile(pending, rows, buildRows(snapshot));
+    expect(next).toMatchObject({ focus: "stack:new", pendingFocus: null });
+  });
+
+  it("focuses right away when the row is already there", () => {
+    expect(focusWhenPresent(start(), rows, "stack:" + STACK_B).focus).toBe("stack:" + STACK_B);
+  });
+
+  it("is dropped by a key press, so it can't pull focus later", () => {
+    const pending = focusWhenPresent(start(), rows, "stack:new");
+    expect(handleKey(pending, rows, "j").state.pendingFocus).toBeNull();
   });
 });
