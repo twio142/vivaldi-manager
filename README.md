@@ -1,116 +1,56 @@
 # Vivaldi Manager
 
-A browser extension that communicates with the Vivaldi browser to show tabs, workspaces, and reading list.
+An extension that works with Vivaldi's own workspaces, tab stacks and reading list. Browse the current window's tabs by workspace and stack, move tabs between workspaces, create, rename and recolor stacks, and manage your reading list. Vim-style keys and fuzzy search, with mouse support too.
 
-Requires a JS mod to be installed in Vivaldi that responds to messages from the extension.
+## Requirements
 
-Tabs belonging to no workspace are shown in a "Default" workspace.
+This extension relies on a companion [JS mod](vivaldi/vivaldi-manager.js) installed into Vivaldi.
 
-## Interface
+> [!WARNING]
+> Vivaldi doesn't officially support JS mods, and an update can break this one (tested with Vivaldi 8.3). The mod has full control over the browser, so read it before installing.
 
-- The popup contains 2 tabs:
-    1. Tabs: Shows all open tabs in the current window, organized by workspace.
-    2. Reading list: Shows all items in the reading list.
-- Operations mainly through keyboard shortcuts, but mouse actions are also supported: close button shows on hover; drag and drop is supported for moving tabs.
-- `ctrl-n` to switch between the two tabs.
+To install, add the file to Vivaldi's `window.html` with a `<script>` tag, and redo it after each Vivaldi update. See the [Modding Vivaldi](https://forum.vivaldi.net/category/52/modding-vivaldi) section of the Vivaldi forum for details.
 
-## Tabs
+## Usage
 
-- Focus on the current tab when popup is opened.
-- The tabs are organized by workspace. A workspace has its own row, but this row can't be focused on.
-- Within each workspace, tabs are sorted by their order in the tab bar.
-- A stack has its own row, which can be focused on. All tabs in the stack are shown below with indentation.
-- Elements on a tab row:
-    - Favicon
-    - Title
-    - Audio icon
-    - Pin icon (pinned tabs)
-- Actions on a tab row:
-    - Activate tab
-    - Select tab(s)
-    - Close tab
-    - Move tab(s)
-        - Moving a tab between two stacked tabs adds the tab to the stack.
-        - Moving a tab across workspaces moves the tab to the other workspace.
-    - Stack tabs / Remove tab from stack
-    - Add tab(s) to reading list
-    - Copy tab URL
-    - Pin / unpin tab(s). A stacked tab pins or unpins with its whole stack.
-- Elements on a workspace row:
-    - Workspace icon
-    - Workspace name
-    - Tab count
-- Elements on a stack row:
-    - A colored dot indicating the stack color
-    - Stack name
-    - Pin icon, if the stack is pinned
-    - Tab count
-- Actions on a stack row:
-    - Edit stack name
-    - Change stack color
-    - Unstack tabs
-    - Close all tabs in the stack
-    - Add all tabs in the stack to reading list
-- Support fuzzy matching to search for tabs (title or url) or stacks (name).
-- Different modes:
-    1. Normal mode: `j/k` move the focus between rows. `tab` selects rows. `v` enters the move mode. `/` enters the search mode.
-    2. Move mode: the current row is marked with a background color. `j/k` move it up/down. If the current row is a stack, the whole stack is moved.
-    3. Search mode: show a search input. Arrow keys move the focus.
-- Keyboard shortcuts:
-    - `j/k`: Move focus up/down, wrap around the list.
-    - `J/K`: Move focus while bypassing tabs in stack. In move mode, move the current tab over a stack instead of moving into it.
-    - `tab`: Select current row and move to next row. Selecting a stack selects all tabs in the stack. Can't select rows from a second workspace.
-    - `v`: Enter/exit move mode
-    - `/`: Enter search mode
-    - `esc`: Exit move/search mode
-    - `x`: Close current/selected item(s)
-    - `enter`: Activate current tab, or (when in search mode and focusing on a stack) exit search mode and focus on the stack
-    - `l`: Same as `enter` (normal mode only)
-    - `h`: On a tab in a stack, focus the stack row
-    - `y`: Copy current/selected item(s) URL
-    - `g`: create a stack with selected tabs
-    - `G`: dissolve a stack or remove selected tabs from a stack
-    - `i`: Edit a stack's name. Shows a text input with the current name. Press `enter` to save, or `esc` to cancel.
-    - `c`: Set a stack's color. `h/l` or arrow keys pick a color, `enter` saves, `esc` cancels.
-    - `s`: Add current/selected tab(s) to reading list
-    - `S`: Add all tabs to reading list
-    - `p`: Pin/unpin current or selected tab(s), or a stack. Pins unless every target is already pinned.
+`ctrl-n` switches between the Tabs and Reading list views.
 
-## Reading List
+### Tabs
 
-- Elements on a row:
-    - Favicon
-    - Title
-    - Domain
-    - Read state
-- Actions on a row:
-    - Open item
-    - Mark as read/unread
-    - Remove item
-    - Copy item URL
-- Other elements:
-    - Search input
-    - Sorting option selector
-    - Hide read items toggle
-- Support fuzzy matching to search for items (title or url).
-- Support different sorting options: by date, by title, by read state.
-- Support hiding read items.
-- Keyboard shortcuts:
-    - `j/k`: Move focus up/down
-    - `enter` / `l`: Open current item
-    - `x`: Remove current item
-    - `y`: Copy current item URL
-    - `r`: Mark current item as read/unread
-    - `s`: Change sorting option
-    - `h`: Hide/show read items
+| Key           | Action                                                                                                                                       |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `j` / `k`     | Move focus down / up (wraps around)                                                                                                          |
+| `J` / `K`     | Same, skipping over the tabs inside stacks                                                                                                   |
+| `enter` / `l` | Switch to the focused tab                                                                                                                    |
+| `h`           | From a tab inside a stack, focus the stack                                                                                                   |
+| `tab`         | Select the focused row and move to the next one (a stack selects all its tabs; one workspace at a time)                                      |
+| `x`           | Close the focused or selected tabs, or a whole stack                                                                                         |
+| `y`           | Copy the URLs                                                                                                                                |
+| `p`           | Pin / unpin (a stacked tab pins with its whole stack)                                                                                        |
+| `s`           | Add the focused or selected tabs to the reading list                                                                                         |
+| `S`           | Add every tab in the window to the reading list                                                                                              |
+| `g`           | Stack the selected tabs (at least two)                                                                                                       |
+| `G`           | Dissolve the focused stack, or take the focused or selected tabs out of their stack                                                          |
+| `i`           | Rename the focused stack (`enter` saves, `esc` cancels)                                                                                      |
+| `c`           | Recolor the focused stack (`h`/`l` to pick, `enter` saves, `esc` cancels)                                                                    |
+| `v`           | Move mode: `j`/`k` move the focused tab or stack, crossing into stacks and other workspaces; `J`/`K` hop over stacks; `v` or `esc` to finish |
+| `/`           | Search tabs by title or URL and stacks by name; `esc` to leave                                                                               |
 
-## Development
+### Reading list
 
-- Extension id: `dkdkfdhakeaaoomfiihhippegpampkod`. Fixed by the `key` in `public/manifest.json`; the mod's allowlist needs it. The matching private key is `key.pem`, kept out of git.
-- `pnpm install`, then `pnpm build` and load `dist/` unpacked at `vivaldi://extensions`.
-- `pnpm test` runs the unit tests. `pnpm dev` serves the popup in a normal browser tab, where it uses the mock backend; inside Vivaldi, add `?mock` to the popup URL for the same.
-- How the extension talks to Vivaldi: [VIVALDI.md](VIVALDI.md).
+| Key           | Action                                   |
+| ------------- | ---------------------------------------- |
+| `j` / `k`     | Move focus down / up                     |
+| `enter` / `l` | Open the item                            |
+| `r`           | Mark read / unread                       |
+| `x`           | Remove the item                          |
+| `y`           | Copy the URL                             |
+| `s`           | Cycle sorting: date, title, unread first |
+| `h`           | Hide / show read items                   |
+| `/`           | Search by title or URL                   |
 
-## References
+Sorting and the hide-read setting are kept the next time you open the popup.
 
-![Vivaldi's workspace panel](./screenshot_1.png)
+### Search
+
+Search is fzf-style: type letters in the order they appear, separate terms with spaces, and every term has to match. Matching is case-sensitive only when a term contains a capital letter.
