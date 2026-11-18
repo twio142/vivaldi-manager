@@ -1,6 +1,6 @@
-# Vivaldi Manager
+# Vivaldi Manager: A Keyboard-Driven Vivaldi Extension
 
-An extension that works with Vivaldi's own workspaces, tab stacks and reading list. Browse the current window's tabs by workspace and stack, move tabs between workspaces, create, rename and recolor stacks, and manage your reading list. Vim-style keys and fuzzy search, with mouse support too.
+Keyboard control for Vivaldi's workspaces, tab stacks and reading list, in a single popup. Vivaldi's own interface for these is built for the mouse. Here you use vim-style keys to fuzzy-search the current window's tabs, jump between them, move tabs across workspaces, create, rename and recolor stacks, and work through your reading list.
 
 ## Requirements
 
@@ -36,7 +36,7 @@ To install, add the file to Vivaldi's `window.html` with a `<script>` tag, and r
 | `v`           | Move mode: `j`/`k` move the focused tab or stack, crossing into stacks and other workspaces; `J`/`K` hop over stacks; `v` or `esc` to finish |
 | `/`           | Search tabs by title or URL and stacks by name; `esc` to leave                                                                               |
 
-### Reading list
+### Reading List
 
 | Key           | Action                                   |
 | ------------- | ---------------------------------------- |
