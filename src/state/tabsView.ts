@@ -1,6 +1,7 @@
 import { STACK_COLORS, type MoveTabsArgs, type StackColor, type Tab } from "../protocol/types";
 import { computeMove } from "./move";
 import { isFocusable, rowTabs, stepFocus, tabKey, type Row, type StackRow, type TabRow } from "./rows";
+import type { SearchResult } from "./search";
 
 // The tabs view's keyboard state machine. `handleKey` is pure: it returns the next state plus the
 // effects (calls to the mod, clipboard writes) for the UI to carry out.
@@ -85,8 +86,10 @@ export function reconcile(state: TabsViewState, oldRows: Row[], newRows: Row[]):
   };
 }
 
-export function setQuery(state: TabsViewState, query: string): TabsViewState {
-  return { ...state, query };
+/** A new search query: focus jumps to its best match, as in fzf. */
+export function setQuery(state: TabsViewState, query: string, result: SearchResult): TabsViewState {
+  const focus = result.best ?? result.rows.find(isFocusable)?.key ?? state.focus;
+  return { ...state, query, focus };
 }
 
 export function setDraft(state: TabsViewState, draft: string): TabsViewState {
@@ -315,7 +318,11 @@ function searchKey(state: TabsViewState, rows: Row[], key: string): KeyResult {
       if (row?.kind === "stack") return done({ ...state, mode: "normal", query: "" });
       return done(state);
     }
+    case "Tab":
+      // Keep focus in the input.
+      return done(state);
     default:
+      // Everything else is typing.
       return ignored(state);
   }
 }

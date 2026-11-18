@@ -3,25 +3,32 @@ import { applyMove, fromStrip, toStrip } from "../model/strip";
 import { ModNotInstalledError, type VivaldiClient } from "../protocol/client";
 import type { ReadingListEntry, TabsSnapshot } from "../protocol/types";
 import {
+  DEFAULT_PREFS,
+  SORT_ORDERS,
   handleReadingListKey,
   initialReadingListState,
   reconcileReadingList,
-  sortEntries,
+  setReadingListQuery,
+  visibleEntries,
   type ReadingListEffect,
+  type ReadingListPrefs,
   type ReadingListViewState,
 } from "../state/readingListView";
 import { buildRows, stackKey, type Row } from "../state/rows";
+import { searchRows } from "../state/search";
 import {
   focusWhenPresent,
   handleKey,
   initialState,
   reconcile,
   setDraft,
+  setQuery,
   type Effect,
   type TabsViewState,
 } from "../state/tabsView";
 import { keyName } from "./keys";
 import { ReadingList } from "./ReadingList";
+import { SearchInput } from "./SearchInput";
 import { TabsList } from "./TabsList";
 
 type Status = { kind: "connecting" } | { kind: "ready" } | { kind: "not-installed" } | { kind: "error"; message: string };
@@ -34,14 +41,58 @@ interface TabsModel {
 }
 
 interface ReadingListModel {
+  /** The whole list, unsorted; the view picks what to show. */
   entries: ReadingListEntry[];
   view: ReadingListViewState;
+}
+
+/** The tab rows on screen: all of them, or the search results. */
+const shownRows = (rows: Row[], view: TabsViewState) => (view.mode === "search" ? searchRows(rows, view.query).rows : rows);
+
+// Sort order and hide-read are kept across popup openings. Outside the extension (the mock in a
+// normal tab) there's no chrome.storage, and they just reset.
+const PREFS_KEY = "readingListPrefs";
+const storage = () => (typeof chrome !== "undefined" ? chrome.storage?.local : undefined);
+
+async function loadPrefs(): Promise<ReadingListPrefs> {
+  try {
+    const stored = (await storage()?.get(PREFS_KEY))?.[PREFS_KEY] as Partial<ReadingListPrefs> | undefined;
+    return {
+      sort: stored?.sort && SORT_ORDERS.includes(stored.sort) ? stored.sort : DEFAULT_PREFS.sort,
+      hideRead: typeof stored?.hideRead === "boolean" ? stored.hideRead : DEFAULT_PREFS.hideRead,
+    };
+  } catch {
+    return DEFAULT_PREFS;
+  }
 }
 
 interface Toast {
   id: number;
   text: string;
   error: boolean;
+}
+
+function TabsView({
+  model,
+  onQuery,
+  onDraft,
+}: {
+  model: TabsModel;
+  onQuery: (query: string) => void;
+  onDraft: (draft: string) => void;
+}) {
+  const { view } = model;
+  const search = view.mode === "search" ? searchRows(model.rows, view.query) : null;
+  return (
+    <>
+      {search && <SearchInput value={view.query} active onInput={onQuery} />}
+      {search && search.rows.length === 0 ? (
+        <p class="notice">No matches.</p>
+      ) : (
+        <TabsList rows={search?.rows ?? model.rows} matches={search?.matches} view={view} onDraft={onDraft} />
+      )}
+    </>
+  );
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -64,6 +115,7 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
   // Effects run one at a time, in order, so successive moves reach the mod in the order pressed.
   const queue = useRef<Promise<void>>(Promise.resolve());
   const toastId = useRef(0);
+  const prefs = useRef<ReadingListPrefs>(DEFAULT_PREFS);
 
   const setTabs = (next: TabsModel) => {
     tabsRef.current = next;
@@ -91,15 +143,18 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
   const applySnapshot = (snapshot: TabsSnapshot) => {
     const rows = buildRows(snapshot);
     const prev = tabsRef.current;
-    const view = prev ? reconcile(prev.view, prev.rows, rows) : initialState(rows, snapshot.activeTabId);
+    // Reconciled against what's on screen, so during a search focus stays on a result.
+    const view = prev
+      ? reconcile(prev.view, shownRows(prev.rows, prev.view), shownRows(rows, prev.view))
+      : initialState(rows, snapshot.activeTabId);
     setTabs({ snapshot, rows, view });
   };
 
-  const applyEntries = (unsorted: ReadingListEntry[]) => {
-    const entries = sortEntries(unsorted);
+  const applyEntries = (entries: ReadingListEntry[]) => {
     const prev = readingListRef.current;
-    const view = prev ? reconcileReadingList(prev.view, prev.entries, entries) : initialReadingListState(entries);
-    setReadingList({ entries, view });
+    const state = prev?.view ?? initialReadingListState(prefs.current);
+    const before = prev ? visibleEntries(prev.entries, state).entries : [];
+    setReadingList({ entries, view: reconcileReadingList(state, before, visibleEntries(entries, state).entries) });
   };
 
   async function run(effect: Effect | ReadingListEffect) {
@@ -152,6 +207,9 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
           return await c.removeFromReadingList(effect.url);
         case "setRead":
           return await c.setRead(effect.url, effect.read);
+        case "savePrefs":
+          prefs.current = effect.prefs;
+          return await storage()?.set({ [PREFS_KEY]: effect.prefs });
         case "closePopup":
           return window.close();
       }
@@ -170,6 +228,8 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
   useEffect(() => {
     let c: VivaldiClient | undefined;
     (async () => {
+      // Before subscribing, so the first reading list push is shown in the saved order.
+      prefs.current = await loadPrefs();
       c = await connect();
       client.current = c;
       c.onTabs(applySnapshot);
@@ -183,6 +243,28 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
     return () => c?.dispose();
   }, []);
 
+  /** Runs a key through the tabs view. Returns whether it was handled. */
+  const tabsKey = (key: string): boolean => {
+    const model = tabsRef.current;
+    if (!model) return false;
+    const result = handleKey(model.view, shownRows(model.rows, model.view), key);
+    if (!result.handled) return false;
+    if (result.state !== model.view) setTabs({ ...model, view: result.state });
+    enqueue(result.effects);
+    return true;
+  };
+
+  /** Runs a key through the reading list view; the sort and hide-read buttons use it too. */
+  const readingListKey = (key: string): boolean => {
+    const model = readingListRef.current;
+    if (!model) return false;
+    const result = handleReadingListKey(model.view, model.entries, key);
+    if (!result.handled) return false;
+    if (result.state !== model.view) setReadingList({ ...model, view: result.state });
+    enqueue(result.effects);
+    return true;
+  };
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const key = keyName(e);
@@ -195,24 +277,7 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
         if (key === "Escape") window.close();
         return;
       }
-      if (viewRef.current === "tabs") {
-        const model = tabsRef.current;
-        // Search mode gets its input and filtering in Phase 4.
-        if (!model || key === "/") return;
-        const result = handleKey(model.view, model.rows, key);
-        if (!result.handled) return;
-        e.preventDefault();
-        if (result.state !== model.view) setTabs({ ...model, view: result.state });
-        enqueue(result.effects);
-      } else {
-        const model = readingListRef.current;
-        if (!model) return;
-        const result = handleReadingListKey(model.view, model.entries, key);
-        if (!result.handled) return;
-        e.preventDefault();
-        if (result.state !== model.view) setReadingList({ ...model, view: result.state });
-        enqueue(result.effects);
-      }
+      if (viewRef.current === "tabs" ? tabsKey(key) : readingListKey(key)) e.preventDefault();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -246,9 +311,12 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
         )}
         {status.kind === "error" && <p class="notice error">{status.message}</p>}
         {status.kind === "ready" && view === "tabs" && tabs && (
-          <TabsList
-            rows={tabs.rows}
-            view={tabs.view}
+          <TabsView
+            model={tabs}
+            onQuery={(query) => {
+              const model = tabsRef.current;
+              if (model) setTabs({ ...model, view: setQuery(model.view, query, searchRows(model.rows, query)) });
+            }}
             onDraft={(draft) => {
               const model = tabsRef.current;
               if (model) setTabs({ ...model, view: setDraft(model.view, draft) });
@@ -256,7 +324,15 @@ export function App({ connect }: { connect: () => Promise<VivaldiClient> }) {
           />
         )}
         {status.kind === "ready" && view === "readingList" && readingList && (
-          <ReadingList entries={readingList.entries} view={readingList.view} />
+          <ReadingList
+            entries={readingList.entries}
+            view={readingList.view}
+            onQuery={(query) => {
+              const model = readingListRef.current;
+              if (model) setReadingList({ ...model, view: setReadingListQuery(model.view, model.entries, query) });
+            }}
+            onKey={readingListKey}
+          />
         )}
       </main>
       <ul class="toasts">

@@ -34,10 +34,10 @@ As soon as a first version of the mod exists: `ping`, `subscribe` with pushes ar
 - Stack color (`c`): the name is replaced by a row of colored dots (all but the current color, plus "no color"); `left`/`right` to pick, `enter` to confirm, `esc` to cancel
 - Move mode (`v`) last, as it's the hardest. It always moves only the focused row (a tab, or a whole stack), never the selection. Cases: crossing workspaces, joining stacks, moving a whole stack, moving into an empty workspace (workspace rows aren't focusable, so `j/k` stops at an empty workspace and drops the tab into it with `target: { workspaceId }`). One `moveTabs` per key press with an optimistic local reorder.
 
-## Phase 4: Search and sorting
+## Phase 4: Search and sorting ✅
 
-- Fuzzy search in both views
-- Reading list sorting (date uses `lastUpdate`) and hide-read toggle, persisted in `chrome.storage.local`
+- Fuzzy search in both views (`/`), fzf-style: letters in order, no typo tolerance, space-separated terms all must match, case-sensitive only when a term has an uppercase letter. Results keep the list order and grouping (a matching stacked tab brings its stack row along), focus jumps to the best match, matched letters are highlighted. Home-made matcher, no dependency
+- Reading list sorting (`s` cycles date → title → unread first; date uses `lastUpdate`) and hide-read toggle (`h`), persisted in `chrome.storage.local`. Toolbar with the search input and both controls, also clickable
 
 ## Phase 5: Mouse
 

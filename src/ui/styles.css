@@ -246,3 +246,63 @@ main {
   outline: 2px solid var(--focus-edge);
   outline-offset: 2px;
 }
+
+.search {
+  flex: 1;
+  min-width: 0;
+  margin: 6px 8px 2px;
+  padding: 3px 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+
+.search:focus {
+  border-color: var(--focus-edge);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+}
+
+.toolbar .search {
+  margin-right: 0;
+}
+
+.tool {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tool.pressed {
+  color: var(--fg);
+  border-color: var(--focus-edge);
+}
+
+.url {
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+mark {
+  background: none;
+  color: var(--focus-edge);
+  font-weight: 600;
+}

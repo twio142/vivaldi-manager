@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "preact/hooks";
 import { STACK_COLORS, type StackColor, type Tab, type WorkspaceIcon as Icon } from "../protocol/types";
 import { tabKey, type Row } from "../state/rows";
+import type { RowMatch } from "../state/search";
 import type { TabsViewState } from "../state/tabsView";
 import { Favicon } from "./Favicon";
+import { Highlight } from "./Highlight";
 
 function WorkspaceIcon({ icon }: { icon: Icon }) {
   if ("emoji" in icon) return <span class="ws-icon">{icon.emoji}</span>;
@@ -50,7 +52,7 @@ type Editing =
   | { mode: "rename"; draft: string; onDraft: (draft: string) => void }
   | { mode: "color"; colors: (StackColor | null)[]; index: number };
 
-function RowContent({ row, editing }: { row: Row; editing?: Editing }) {
+function RowContent({ row, editing, match }: { row: Row; editing?: Editing; match?: RowMatch }) {
   switch (row.kind) {
     case "workspace":
       return (
@@ -74,7 +76,9 @@ function RowContent({ row, editing }: { row: Row; editing?: Editing }) {
               ))}
             </span>
           ) : (
-            <span class="title">{row.stack.name}</span>
+            <span class="title">
+              <Highlight text={row.stack.name} positions={match?.positions} />
+            </span>
           )}
           <span class="count">{row.stack.tabs.length}</span>
         </>
@@ -83,7 +87,15 @@ function RowContent({ row, editing }: { row: Row; editing?: Editing }) {
       return (
         <>
           <Favicon pageUrl={row.tab.url} iconUrl={row.tab.favIconUrl} />
-          <span class="title">{row.tab.title || row.tab.url}</span>
+          <span class="title">
+            <Highlight text={row.tab.title || row.tab.url} positions={match?.field === "title" ? match.positions : undefined} />
+          </span>
+          {match?.field === "url" && (
+            // Matched by URL: show it, since the title alone wouldn't explain the match.
+            <span class="url">
+              <Highlight text={row.tab.url} positions={match.positions} />
+            </span>
+          )}
           <AudioIcon tab={row.tab} />
         </>
       );
@@ -96,12 +108,14 @@ function RowItem({
   selected,
   moving,
   editing,
+  match,
 }: {
   row: Row;
   focused: boolean;
   selected: boolean;
   moving: boolean;
   editing?: Editing;
+  match?: RowMatch;
 }) {
   const ref = useRef<HTMLLIElement>(null);
   useEffect(() => {
@@ -120,17 +134,20 @@ function RowItem({
   ].filter(Boolean);
   return (
     <li ref={ref} class={classes.join(" ")} aria-selected={focused}>
-      <RowContent row={row} editing={editing} />
+      <RowContent row={row} editing={editing} match={match} />
     </li>
   );
 }
 
 export function TabsList({
   rows,
+  matches,
   view,
   onDraft,
 }: {
   rows: Row[];
+  /** Search matches, for highlighting. */
+  matches?: ReadonlyMap<string, RowMatch>;
   view: TabsViewState;
   onDraft: (draft: string) => void;
 }) {
@@ -162,6 +179,7 @@ export function TabsList({
           selected={isSelected(row)}
           moving={moving.has(row.key)}
           editing={row.key === view.focus ? editing : undefined}
+          match={matches?.get(row.key)}
         />
       ))}
     </ul>

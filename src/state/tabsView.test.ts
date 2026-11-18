@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { sampleSnapshot } from "../protocol/fixture";
 import { buildRows } from "./rows";
-import { focusWhenPresent, handleKey, initialState, reconcile, setDraft, type TabsViewState } from "./tabsView";
+import { searchRows } from "./search";
+import { focusWhenPresent, handleKey, initialState, reconcile, setDraft, setQuery, type TabsViewState } from "./tabsView";
 
 const STACK_A = "6f1c2a9e-0000-4000-8000-000000000001";
 const STACK_B = "6f1c2a9e-0000-4000-8000-000000000002";
@@ -211,5 +212,18 @@ describe("focusWhenPresent", () => {
   it("is dropped by a key press, so it can't pull focus later", () => {
     const pending = focusWhenPresent(start(), rows, "stack:new");
     expect(handleKey(pending, rows, "j").state.pendingFocus).toBeNull();
+  });
+});
+
+describe("search mode", () => {
+  it("jumps focus to the best match as the query changes", () => {
+    const state = press(start({ focus: "tab:1" }), "/").state;
+    const next = setQuery(state, "chess", searchRows(rows, "chess"));
+    expect(next).toMatchObject({ query: "chess", focus: "tab:21" });
+  });
+
+  it("keeps Tab in the input", () => {
+    const state = press(start(), "/").state;
+    expect(handleKey(state, rows, "Tab")).toMatchObject({ handled: true, effects: [] });
   });
 });
