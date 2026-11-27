@@ -365,13 +365,41 @@
 
   async function createStack(tabIds) {
     const { pageSelection: sel, pageActions: actions } = need("pageSelection", "pageActions");
-    const { found } = pagesById(sel, tabIds);
+    const { pages, found } = pagesById(sel, tabIds);
     if (found.length < 2) fail("a stack needs at least two tabs");
     const pinned = found.filter((p) => p.pinned).length;
     if (pinned > 0 && pinned < found.length) fail("pinned and unpinned tabs can't share a stack");
+    const home = homeOfStack(pages, found);
     const stackId = await actions.createTabStack(pageList(sel, found.map((p) => p.id)), { showStackEditor: false });
     if (!stackId) fail("Vivaldi did not create the stack (is tab stacking turned off in Settings > Tabs?)");
+    if (home) await keepStackHome(sel, stackId, home);
     return { stackId };
+  }
+
+  // Vivaldi puts a new stack in the workspace on screen. Tabs that all come from one workspace keep it: the stack goes
+  // back to where the first of them was, next to the item that was just before it (or after it), else to the end.
+  function homeOfStack(pages, found) {
+    const space = spaceOfPage(found[0]);
+    if (found.some((p) => spaceOfPage(p) !== space)) return null; // mixed workspaces: Vivaldi's choice stands
+    const others = pages.filter((p) => spaceOfPage(p) === space && !found.includes(p) && p.pinned === found[0].pinned);
+    const first = pages.indexOf(found[0]);
+    const before = others.filter((p) => pages.indexOf(p) < first).pop();
+    const after = others.find((p) => pages.indexOf(p) > first);
+    const anchor = (page, tweak) => ({ target: stackOf(pages, page) ?? page.vivExtData.ext_id, tweak });
+    return { space, ...(before ? anchor(before, "below") : after ? anchor(after, "above") : { target: "last" }) };
+  }
+
+  async function keepStackHome(sel, stackId, home) {
+    const stacked = stripPages(sel).filter((p) => groupOfPage(p) === stackId);
+    if (!stacked.length || stacked.every((p) => spaceOfPage(p) === home.space)) return;
+    log("move new stack", stackId, "back to workspace", home.space, home);
+    if (home.target === "last") {
+      // The tabs were all the workspace had.
+      await moveToWorkspace(home.space, stacked, { spaces: need("workspaceStore").workspaceStore, sel });
+      return;
+    }
+    await move({ tabIds: [], extIds: [stackId], target: home.target, tweaks: [home.tweak, "do-not-reparent"],
+      workspaceId: home.space || 0 });
   }
 
   async function removeFromStack(tabIds) {
